@@ -184,29 +184,42 @@ async def crear_orden(orden: OrdenCreate):
     Crea una nueva orden con su cliente asociado.
     
     **Implementa transacciones ACID con psycopg2:**
-    - Si falla la creación del cliente, no se crea la orden (rollback)
-    - Solo si ambas operaciones son exitosas, se confirma la transacción (commit)
+    - Si el cliente ya existe (por email), se reutiliza
+    - Si no existe, se crea uno nuevo
+    - Si falla alguna operación, se hace rollback
     """
     conn = None
+    cliente_existente = False
     try:
         conn = get_postgres_connection()
         # Desactivar autocommit para manejar transacción manualmente
         conn.autocommit = False
         cursor = conn.cursor()
         
-        # PASO 1: Insertar cliente
+        # PASO 1: Verificar si el cliente ya existe (por email)
         cursor.execute("""
-            INSERT INTO clientes (nombre, email, telefono, direccion)
-            VALUES (%s, %s, %s, %s)
-            RETURNING id;
-        """, (
-            orden.cliente.nombre,
-            orden.cliente.email,
-            orden.cliente.telefono,
-            orden.cliente.direccion
-        ))
+            SELECT id, nombre FROM clientes WHERE email = %s;
+        """, (orden.cliente.email,))
         
-        cliente_id = cursor.fetchone()[0]
+        cliente_row = cursor.fetchone()
+        
+        if cliente_row:
+            # Cliente ya existe, reutilizarlo
+            cliente_id = cliente_row[0]
+            cliente_existente = True
+        else:
+            # Cliente no existe, crearlo
+            cursor.execute("""
+                INSERT INTO clientes (nombre, email, telefono, direccion)
+                VALUES (%s, %s, %s, %s)
+                RETURNING id;
+            """, (
+                orden.cliente.nombre,
+                orden.cliente.email,
+                orden.cliente.telefono,
+                orden.cliente.direccion
+            ))
+            cliente_id = cursor.fetchone()[0]
         
         # PASO 2: Insertar orden vinculada al cliente
         cursor.execute("""
@@ -223,13 +236,15 @@ async def crear_orden(orden: OrdenCreate):
         
         orden_id = cursor.fetchone()[0]
         
-        # COMMIT: Ambas operaciones exitosas
+        # COMMIT: Operaciones exitosas
         conn.commit()
+        
+        mensaje = "Orden creada (cliente existente reutilizado)" if cliente_existente else "Orden y cliente creados exitosamente"
         
         return OrdenResponse(
             orden_id=orden_id,
             cliente_id=cliente_id,
-            mensaje="Orden y cliente creados exitosamente"
+            mensaje=mensaje
         )
         
     except psycopg2.IntegrityError as e:
