@@ -1,0 +1,1405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HybridLogisticsHub - Tracking en Tiempo Real</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #22d3ee;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --dark: #0f172a;
+            --dark-light: #1e293b;
+            --dark-lighter: #334155;
+            --text: #f8fafc;
+            --text-muted: #94a3b8;
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: rgba(255, 255, 255, 0.1);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--dark) 0%, #1a1a2e 100%);
+            color: var(--text);
+            overflow: hidden;
+        }
+        
+        .app-container {
+            display: flex;
+            height: 100vh;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            width: 380px;
+            background: var(--dark-light);
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--glass-border);
+            position: relative;
+            z-index: 1000;
+        }
+        
+        /* Header */
+        .header {
+            padding: 24px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+        
+        .header h1 .icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        
+        .header p {
+            font-size: 0.85rem;
+            opacity: 0.8;
+            margin-top: 8px;
+            margin-left: 52px;
+        }
+        
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            padding: 16px 24px;
+            background: var(--dark);
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 12px 8px;
+            background: var(--glass);
+            border-radius: 12px;
+            border: 1px solid var(--glass-border);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        .stat-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .stat-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 4px;
+        }
+        
+        /* Content */
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb {
+            background: var(--dark-lighter);
+            border-radius: 3px;
+        }
+        
+        /* Section */
+        .section {
+            margin-bottom: 20px;
+        }
+        
+        .section-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .section-icon {
+            width: 32px;
+            height: 32px;
+            background: var(--glass);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+        
+        .section-title {
+            font-size: 0.85rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+        }
+        
+        /* Order List */
+        .order-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-height: 280px;
+            overflow-y: auto;
+            padding-right: 4px;
+        }
+        
+        .order-list::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .order-list::-webkit-scrollbar-thumb {
+            background: var(--dark-lighter);
+            border-radius: 2px;
+        }
+        
+        .order-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .order-card::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background: var(--dark-lighter);
+            transition: all 0.3s;
+        }
+        
+        .order-card:hover {
+            background: rgba(99, 102, 241, 0.1);
+            border-color: var(--primary);
+            transform: translateX(4px);
+        }
+        
+        .order-card:hover::before {
+            background: var(--primary);
+        }
+        
+        .order-card.active {
+            background: rgba(99, 102, 241, 0.15);
+            border-color: var(--primary);
+        }
+        
+        .order-card.active::before {
+            background: var(--primary);
+            width: 6px;
+        }
+        
+        .order-card.simulating {
+            animation: glow 2s ease-in-out infinite;
+        }
+        
+        .order-card.simulating::before {
+            background: var(--success);
+        }
+        
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+            50% { box-shadow: 0 0 20px 0 rgba(16, 185, 129, 0.3); }
+        }
+        
+        .order-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .order-id {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+        
+        .order-status {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .status-en-proceso { background: rgba(34, 211, 238, 0.2); color: var(--secondary); }
+        .status-en-tránsito, .status-en-transito { background: rgba(16, 185, 129, 0.2); color: var(--success); }
+        .status-pendiente { background: rgba(245, 158, 11, 0.2); color: var(--warning); }
+        .status-entregado { background: rgba(148, 163, 184, 0.2); color: var(--text-muted); }
+        .status-cancelado { background: rgba(239, 68, 68, 0.2); color: var(--danger); }
+        
+        .order-desc {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .order-destination {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        /* Controls */
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .btn-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        
+        .btn {
+            padding: 14px 20px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .btn:hover::before {
+            left: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(99, 102, 241, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+            grid-column: span 2;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.3);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--dark-lighter);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+        
+        /* Speed Control */
+        .speed-control {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 16px;
+        }
+        
+        .speed-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .speed-label {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .speed-value {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--secondary);
+        }
+        
+        .speed-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--dark-lighter);
+            outline: none;
+        }
+        
+        .speed-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--secondary), var(--primary));
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(34, 211, 238, 0.3);
+            transition: transform 0.2s;
+        }
+        
+        .speed-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+        
+        /* Simulation Status */
+        .simulation-status {
+            background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(34, 211, 238, 0.1));
+            border: 1px solid rgba(16, 185, 129, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+        
+        .simulation-status.hidden {
+            display: none;
+        }
+        
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: pulse-dot 1.5s infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        
+        /* Tracking Info Card */
+        .tracking-card {
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+        }
+        
+        .tracking-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid var(--glass-border);
+        }
+        
+        .tracking-row:last-child {
+            border-bottom: none;
+        }
+        
+        .tracking-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        .tracking-value {
+            color: var(--secondary);
+            font-weight: 600;
+            font-size: 0.85rem;
+        }
+        
+        .progress-bar {
+            margin-top: 12px;
+            height: 8px;
+            background: var(--dark);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success), var(--secondary));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        
+        /* Log */
+        .log-container {
+            background: var(--dark);
+            border-radius: 12px;
+            padding: 12px;
+            max-height: 140px;
+            overflow-y: auto;
+            font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+            font-size: 0.75rem;
+        }
+        
+        .log-container::-webkit-scrollbar {
+            width: 4px;
+        }
+        
+        .log-container::-webkit-scrollbar-thumb {
+            background: var(--dark-lighter);
+            border-radius: 2px;
+        }
+        
+        .log-entry {
+            padding: 6px 0;
+            border-bottom: 1px solid var(--glass-border);
+            display: flex;
+            gap: 8px;
+        }
+        
+        .log-entry:last-child {
+            border-bottom: none;
+        }
+        
+        .log-time {
+            color: var(--primary);
+            white-space: nowrap;
+        }
+        
+        .log-msg {
+            color: var(--text-muted);
+        }
+        
+        /* Map Container */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Map Overlay */
+        .map-overlay {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .map-card {
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 16px;
+            min-width: 220px;
+        }
+        
+        .map-card-title {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        
+        .map-card-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+        
+        .map-card-subtitle {
+            font-size: 0.8rem;
+            color: var(--secondary);
+            margin-top: 4px;
+        }
+        
+        /* Warehouse Badge */
+        .warehouse-badge {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: rgba(15, 23, 42, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 16px;
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .warehouse-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, var(--warning), #d97706);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.3rem;
+        }
+        
+        .warehouse-info h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+        
+        .warehouse-info p {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+        }
+        
+        /* Custom Leaflet Styles */
+        .leaflet-popup-content-wrapper {
+            background: var(--dark-light);
+            color: var(--text);
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        
+        .leaflet-popup-tip {
+            background: var(--dark-light);
+        }
+        
+        .leaflet-popup-content {
+            margin: 12px 14px;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .truck-marker, .warehouse-marker, .destination-marker, .delivered-marker {
+            background: none !important;
+            border: none !important;
+        }
+        
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        
+        .empty-state-icon {
+            font-size: 3rem;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+        
+        .empty-state-text {
+            font-size: 0.9rem;
+        }
+        
+        /* Loading */
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 20px;
+            color: var(--text-muted);
+        }
+        
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--glass-border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 100%;
+                position: fixed;
+                bottom: 0;
+                height: 50vh;
+                border-right: none;
+                border-top: 1px solid var(--glass-border);
+                border-radius: 24px 24px 0 0;
+            }
+            
+            .map-container {
+                height: 50vh;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <header class="header">
+                <h1>
+                    <span class="icon">🚀</span>
+                    HybridLogisticsHub
+                </h1>
+                <p>Sistema de tracking en tiempo real</p>
+            </header>
+            
+            <div class="stats-bar">
+                <div class="stat-item">
+                    <div class="stat-value" id="statTotal">-</div>
+                    <div class="stat-label">Total</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statActive">-</div>
+                    <div class="stat-label">Activos</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statDelivered">-</div>
+                    <div class="stat-label">Entregados</div>
+                </div>
+            </div>
+            
+            <div class="sidebar-content">
+                <section class="section">
+                    <div class="section-header">
+                        <span class="section-icon">📦</span>
+                        <span class="section-title">Órdenes Activas</span>
+                    </div>
+                    <div id="orderList" class="order-list">
+                        <div class="loading">
+                            <div class="loading-spinner"></div>
+                            <span>Cargando órdenes...</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="section">
+                    <div class="section-header">
+                        <span class="section-icon">🎮</span>
+                        <span class="section-title">Control de Simulación</span>
+                    </div>
+                    <div class="controls">
+                        <button id="btnSimulateAll" class="btn btn-success" onclick="startAllSimulations()">
+                            <span>🚚</span> Simular Todos los Pedidos
+                        </button>
+                        <div class="btn-group">
+                            <button id="btnSimulate" class="btn btn-primary" onclick="startSimulation()" disabled>
+                                <span>▶️</span> Individual
+                            </button>
+                            <button id="btnStop" class="btn btn-danger" onclick="stopAllSimulations()">
+                                <span>⏹️</span> Detener
+                            </button>
+                        </div>
+                        <button class="btn btn-secondary" onclick="loadOrders()">
+                            <span>🔄</span> Actualizar Lista
+                        </button>
+                        <div class="speed-control">
+                            <div class="speed-header">
+                                <span class="speed-label">Velocidad de simulación</span>
+                                <span id="speedValue" class="speed-value">5x</span>
+                            </div>
+                            <input type="range" id="speedSlider" class="speed-slider" min="1" max="10" value="5" oninput="updateSpeed()">
+                        </div>
+                        <div id="simulationStatus" class="simulation-status hidden">
+                            <span class="status-dot"></span>
+                            <span id="statusText">0 pedidos en movimiento</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="section">
+                    <div class="section-header">
+                        <span class="section-icon">📍</span>
+                        <span class="section-title">Tracking Actual</span>
+                    </div>
+                    <div id="trackingInfo" class="tracking-card">
+                        <div style="text-align: center; color: var(--text-muted); padding: 20px;">
+                            Selecciona una orden para ver detalles
+                        </div>
+                    </div>
+                </section>
+                
+                <section class="section">
+                    <div class="section-header">
+                        <span class="section-icon">📋</span>
+                        <span class="section-title">Registro de Actividad</span>
+                    </div>
+                    <div id="logContainer" class="log-container">
+                        <div class="log-entry">
+                            <span class="log-time">[Sistema]</span>
+                            <span class="log-msg">Inicializando...</span>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </aside>
+        
+        <main class="map-container">
+            <div id="map"></div>
+            
+            <div class="map-overlay">
+                <div class="map-card" id="trackingCard" style="display: none;">
+                    <div class="map-card-title">Orden Seleccionada</div>
+                    <div class="map-card-value" id="trackingOrderId">#--</div>
+                    <div class="map-card-subtitle" id="trackingProgress">Selecciona una orden</div>
+                </div>
+            </div>
+            
+            <div class="warehouse-badge">
+                <div class="warehouse-icon">🏭</div>
+                <div class="warehouse-info">
+                    <h4>Almacén Central</h4>
+                    <p>Av. Industrial 100, Arequipa</p>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const API_URL = 'http://localhost:8000';
+        
+        // API Key de OpenRouteService (obtener gratis en https://openrouteservice.org)
+        const ORS_API_KEY = 'eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6IjQ0YWQyNTVjMjc2MzRmMjNiMzM1MTQ4YjhiZWY1YTMyIiwiaCI6Im11cm11cjY0In0=';
+        
+        // Almacén Central - Arequipa
+        const WAREHOUSE = {
+            lat: -16.4025001658711,
+            lng: -71.5347295522896,
+            name: "Almacén Central"
+        };
+        
+        // Destinos en Arequipa
+        const DESTINATIONS = {
+            "Cercado": { lat: -16.3989, lng: -71.5375 },
+            "Cayma": { lat: -16.3850, lng: -71.5580 },
+            "José Luis Bustamante": { lat: -16.4180, lng: -71.5280 },
+            "Bustamante": { lat: -16.4180, lng: -71.5280 },
+            "Yanahuara": { lat: -16.3920, lng: -71.5450 },
+            "Miraflores": { lat: -16.4050, lng: -71.5100 },
+            "Cerro Colorado": { lat: -16.4100, lng: -71.5600 },
+            "Sachaca": { lat: -16.4200, lng: -71.5700 },
+            "Socabaya": { lat: -16.4300, lng: -71.5400 },
+            "Paucarpata": { lat: -16.4000, lng: -71.4900 },
+            "Mercaderes": { lat: -16.3995, lng: -71.5370 },
+            "Ejército": { lat: -16.3860, lng: -71.5560 },
+            "Dolores": { lat: -16.4150, lng: -71.5300 },
+            "Álvarez Thomas": { lat: -16.3930, lng: -71.5440 },
+            "Lambramani": { lat: -16.4020, lng: -71.5320 },
+            "Ugarte": { lat: -16.3985, lng: -71.5380 },
+            "Bolívar": { lat: -16.4000, lng: -71.5360 },
+            "Parra": { lat: -16.4060, lng: -71.5120 },
+            "La Merced": { lat: -16.3992, lng: -71.5365 },
+            "Goyeneche": { lat: -16.4010, lng: -71.5350 },
+            "Puente Grau": { lat: -16.3980, lng: -71.5390 },
+            "Independencia": { lat: -16.4005, lng: -71.5355 },
+            "Rivero": { lat: -16.3998, lng: -71.5368 },
+            "Venezuela": { lat: -16.4090, lng: -71.5580 },
+            "Siglo XX": { lat: -16.4015, lng: -71.5340 },
+            "Arequipa": { lat: -16.4190, lng: -71.5680 },
+            "Colón": { lat: -16.3988, lng: -71.5372 },
+            "Progreso": { lat: -16.4055, lng: -71.5110 }
+        };
+        
+        // Estado global
+        let map;
+        let markers = {};
+        let selectedOrder = null;
+        let simulationSpeed = 5;
+        let orders = [];
+        let allOrders = [];
+        let multiSimulationActive = false;
+        let activeSimulations = {};
+        let deliveredCount = 0;
+        let routePolyline = null;
+        let destinationMarker = null;
+        
+        // Iconos personalizados
+        const createIcon = (emoji, size = 30) => L.divIcon({
+            html: `<div style="font-size: ${size * 0.8}px; text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">${emoji}</div>`,
+            className: 'custom-marker',
+            iconSize: [size, size],
+            iconAnchor: [size/2, size/2]
+        });
+        
+        const truckIcon = createIcon('🚚', 35);
+        const warehouseIcon = createIcon('🏭', 45);
+        const destinationIcon = createIcon('📍', 30);
+        const deliveredIcon = createIcon('✅', 28);
+        
+        // Inicializar mapa
+        function initMap() {
+            map = L.map('map', {
+                zoomControl: false
+            }).setView([WAREHOUSE.lat, WAREHOUSE.lng], 13);
+            
+            L.control.zoom({ position: 'topright' }).addTo(map);
+            
+            // Estilo oscuro del mapa
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '©OpenStreetMap, ©CartoDB',
+                maxZoom: 19
+            }).addTo(map);
+            
+            // Marcador del almacén
+            L.marker([WAREHOUSE.lat, WAREHOUSE.lng], { icon: warehouseIcon })
+                .addTo(map)
+                .bindPopup('<b>🏭 Almacén Central</b><br>Av. Industrial 100, Arequipa');
+        }
+        
+        // Cargar órdenes
+        async function loadOrders() {
+            try {
+                const response = await fetch(`${API_URL}/ordenes?limite=100`);
+                const data = await response.json();
+                
+                allOrders = data.ordenes;
+                orders = allOrders.filter(o => o.estado === 'En Tránsito' || o.estado === 'En Proceso');
+                deliveredCount = allOrders.filter(o => o.estado === 'Entregado').length;
+                
+                updateStats();
+                renderOrderList();
+                addLog('Sistema listo - ' + orders.length + ' órdenes activas');
+            } catch (error) {
+                addLog('Error: ' + error.message);
+                document.getElementById('orderList').innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">⚠️</div>
+                        <div class="empty-state-text">Error al cargar órdenes.<br>Verifica que el servidor esté corriendo.</div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Actualizar estadísticas
+        function updateStats() {
+            document.getElementById('statTotal').textContent = allOrders.length;
+            document.getElementById('statActive').textContent = orders.length;
+            document.getElementById('statDelivered').textContent = deliveredCount;
+        }
+        
+        // Renderizar lista de órdenes
+        function renderOrderList() {
+            const container = document.getElementById('orderList');
+            
+            if (orders.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📭</div>
+                        <div class="empty-state-text">No hay órdenes activas</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            container.innerHTML = orders.map(order => `
+                <div class="order-card ${selectedOrder?.id === order.id ? 'active' : ''} ${activeSimulations[order.id] ? 'simulating' : ''}" 
+                     onclick="selectOrder(${order.id})">
+                    <div class="order-header">
+                        <span class="order-id">Orden #${order.id}</span>
+                        <span class="order-status status-${order.estado.toLowerCase().replace(' ', '-')}">${order.estado}</span>
+                    </div>
+                    <div class="order-desc">
+                        <span>📦</span> ${order.descripcion}
+                    </div>
+                    <div class="order-destination">
+                        <span>📍</span> ${order.direccion_destino.split(',')[0]}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Seleccionar orden
+        async function selectOrder(orderId) {
+            selectedOrder = orders.find(o => o.id === orderId);
+            renderOrderList();
+            
+            document.getElementById('btnSimulate').disabled = false;
+            document.getElementById('trackingCard').style.display = 'block';
+            document.getElementById('trackingOrderId').textContent = `#${orderId}`;
+            document.getElementById('trackingProgress').textContent = 'Listo para simular';
+            
+            // Actualizar panel de tracking
+            updateTrackingPanel(selectedOrder);
+            
+            // Mostrar ruta en el mapa
+            showRoutePreview(orderId);
+            
+            addLog(`Orden #${orderId} seleccionada`);
+        }
+        
+        // Actualizar panel de tracking
+        function updateTrackingPanel(order) {
+            const container = document.getElementById('trackingInfo');
+            const destination = getDestinationFromAddress(order.direccion_destino);
+            
+            container.innerHTML = `
+                <div class="tracking-row">
+                    <span class="tracking-label">Orden</span>
+                    <span class="tracking-value">#${order.id}</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Estado</span>
+                    <span class="tracking-value">${order.estado}</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Destino</span>
+                    <span class="tracking-value">${destination.name}</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Producto</span>
+                    <span class="tracking-value">${order.descripcion}</span>
+                </div>
+            `;
+        }
+        
+        // Mostrar preview de ruta
+        async function showRoutePreview(orderId) {
+            // Limpiar ruta anterior
+            if (routePolyline) map.removeLayer(routePolyline);
+            if (destinationMarker) map.removeLayer(destinationMarker);
+            routePolyline = null;
+            
+            const order = orders.find(o => o.id === orderId);
+            const destination = getDestinationFromAddress(order.direccion_destino);
+            
+            // Solo marcador de destino
+            destinationMarker = L.marker([destination.lat, destination.lng], { icon: destinationIcon })
+                .addTo(map)
+                .bindPopup(`<b>📍 Destino</b><br>${order.direccion_destino}`);
+            
+            // Ajustar vista para mostrar almacén y destino
+            const bounds = L.latLngBounds(
+                [WAREHOUSE.lat, WAREHOUSE.lng],
+                [destination.lat, destination.lng]
+            );
+            map.fitBounds(bounds, { padding: [50, 50] });
+        }
+        
+        // Obtener destino basado en dirección
+        function getDestinationFromAddress(direccion) {
+            for (const [zona, coords] of Object.entries(DESTINATIONS)) {
+                if (direccion.toLowerCase().includes(zona.toLowerCase())) {
+                    return { name: zona, ...coords };
+                }
+            }
+            const randomOffset = () => (Math.random() - 0.5) * 0.02;
+            return { name: "Destino", lat: -16.40 + randomOffset(), lng: -71.53 + randomOffset() };
+        }
+        
+        // Generar ruta interpolada (fallback si ORS falla)
+        function generateRoute(start, end, numPoints = 40) {
+            const route = [];
+            for (let i = 0; i <= numPoints; i++) {
+                const t = i / numPoints;
+                const noise = () => (Math.random() - 0.5) * 0.002;
+                route.push([
+                    start[0] + (end[0] - start[0]) * t + noise(),
+                    start[1] + (end[1] - start[1]) * t + noise()
+                ]);
+            }
+            return route;
+        }
+        
+        // Obtener ruta real de OpenRouteService (sigue calles reales)
+        async function getRouteFromORS(startLat, startLng, endLat, endLng) {
+            try {
+                const url = `https://api.openrouteservice.org/v2/directions/driving-car?api_key=${ORS_API_KEY}&start=${startLng},${startLat}&end=${endLng},${endLat}`;
+                
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error('Error en OpenRouteService');
+                }
+                
+                const data = await response.json();
+                
+                // Extraer coordenadas de la ruta y convertir a [lat, lng]
+                const coordinates = data.features[0].geometry.coordinates;
+                return coordinates.map(coord => [coord[1], coord[0]]);
+            } catch (error) {
+                console.warn('ORS falló, usando ruta interpolada:', error.message);
+                return null;
+            }
+        }
+        
+        // Iniciar simulación individual
+        function startSimulation() {
+            if (!selectedOrder) return;
+            
+            // Activar modo simulación para que el intervalo funcione
+            multiSimulationActive = true;
+            document.getElementById('btnSimulate').disabled = true;
+            document.getElementById('simulationStatus').classList.remove('hidden');
+            
+            // Limpiar preview anterior
+            if (routePolyline) map.removeLayer(routePolyline);
+            if (destinationMarker) map.removeLayer(destinationMarker);
+            
+            addLog(`▶️ Simulando orden #${selectedOrder.id}...`);
+            startSingleOrderSimulation(selectedOrder, '#6366f1');
+        }
+        
+        // Simular todos
+        async function startAllSimulations() {
+            if (orders.length === 0) {
+                addLog('No hay órdenes para simular');
+                return;
+            }
+            
+            multiSimulationActive = true;
+            document.getElementById('btnSimulateAll').disabled = true;
+            document.getElementById('simulationStatus').classList.remove('hidden');
+            
+            addLog(`🚀 Iniciando ${orders.length} simulaciones...`);
+            
+            // Limpiar marcadores anteriores
+            Object.values(markers).forEach(m => map.removeLayer(m));
+            markers = {};
+            
+            // Colores vibrantes para los camiones
+            const colors = ['#f87171', '#fb923c', '#fbbf24', '#a3e635', '#34d399', '#22d3ee', '#818cf8', '#e879f9', '#f472b6', '#facc15'];
+            
+            for (let i = 0; i < orders.length; i++) {
+                setTimeout(() => {
+                    startSingleOrderSimulation(orders[i], colors[i % colors.length]);
+                }, i * 300);
+            }
+        }
+        
+        // Simular una orden
+        async function startSingleOrderSimulation(order, color) {
+            const orderId = order.id;
+            
+            try {
+                const orderResponse = await fetch(`${API_URL}/ordenes/${orderId}`);
+                const orderData = await orderResponse.json();
+                const destination = getDestinationFromAddress(orderData.direccion_destino);
+                
+                // Intentar obtener ruta real de OpenRouteService
+                let route = await getRouteFromORS(
+                    WAREHOUSE.lat, WAREHOUSE.lng,
+                    destination.lat, destination.lng
+                );
+                
+                // Si ORS falla, usar ruta interpolada como fallback
+                if (!route || route.length === 0) {
+                    addLog(`⚠️ Orden #${orderId}: usando ruta directa`);
+                    route = generateRoute(
+                        [WAREHOUSE.lat, WAREHOUSE.lng],
+                        [destination.lat, destination.lng],
+                        35 + Math.floor(Math.random() * 15)
+                    );
+                } else {
+                    addLog(`🗺️ Orden #${orderId}: ruta por calles (${route.length} puntos)`);
+                }
+                
+                // Crear marcador del camión
+                markers[orderId] = L.marker([WAREHOUSE.lat, WAREHOUSE.lng], { icon: truckIcon })
+                    .addTo(map)
+                    .bindPopup(`<b>🚚 Orden #${orderId}</b><br>${order.descripcion}`);
+                
+                // Línea de ruta (punteada)
+                const routeLine = L.polyline(route, {
+                    color: color,
+                    weight: 3,
+                    opacity: 0.4,
+                    dashArray: '8, 12'
+                }).addTo(map);
+                
+                // Línea de camino recorrido
+                const traveledPath = L.polyline([], {
+                    color: color,
+                    weight: 4,
+                    opacity: 0.9
+                }).addTo(map);
+                
+                // Marcador de destino
+                const destMarker = L.marker([destination.lat, destination.lng], { icon: destinationIcon }).addTo(map);
+                
+                let routeIdx = 0;
+                const totalPoints = route.length;
+                
+                const interval = setInterval(async () => {
+                    if (!multiSimulationActive || routeIdx >= totalPoints) {
+                        clearInterval(interval);
+                        delete activeSimulations[orderId];
+                        renderOrderList();
+                        
+                        if (routeIdx >= totalPoints) {
+                            try {
+                                // Enviar tracking final
+                                const point = route[route.length - 1];
+                                await fetch(`${API_URL}/tracking/${orderId}`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                        latitud: point[0],
+                                        longitud: point[1],
+                                        velocidad_kmh: 0,
+                                        dispositivo_id: `GPS-${orderId}`
+                                    })
+                                });
+                                
+                                // Actualizar estado a Entregado
+                                await fetch(`${API_URL}/ordenes/${orderId}/estado`, {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ estado: 'Entregado' })
+                                });
+                                
+                                deliveredCount++;
+                                updateStats();
+                                
+                                if (markers[orderId]) {
+                                    markers[orderId].setIcon(deliveredIcon);
+                                }
+                                
+                                // Mostrar 100% y velocidad 0 en el panel
+                                if (selectedOrder?.id === orderId) {
+                                    document.getElementById('trackingProgress').textContent = '100% - Entregado';
+                                    updateTrackingInfoLive(orderId, point[0], point[1], 0, 100);
+                                }
+                                
+                                addLog(`✅ Orden #${orderId} entregada`);
+                            } catch (e) {
+                                addLog(`❌ Error con orden #${orderId}`);
+                            }
+                        }
+                        
+                        updateSimulationStatus();
+                        
+                        if (Object.keys(activeSimulations).length === 0 && multiSimulationActive) {
+                            addLog('🏁 Todas las entregas completadas');
+                            document.getElementById('btnSimulateAll').disabled = false;
+                            document.getElementById('btnSimulate').disabled = false;
+                            document.getElementById('simulationStatus').classList.add('hidden');
+                            multiSimulationActive = false;
+                            setTimeout(() => loadOrders(), 2000);
+                        }
+                        return;
+                    }
+                    
+                    const point = route[routeIdx];
+                    const velocidad = 25 + Math.random() * 35;
+                    
+                    try {
+                        await fetch(`${API_URL}/tracking/${orderId}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                latitud: point[0],
+                                longitud: point[1],
+                                velocidad_kmh: velocidad,
+                                dispositivo_id: `GPS-${orderId}`
+                            })
+                        });
+                    } catch (e) {}
+                    
+                    if (markers[orderId]) {
+                        markers[orderId].setLatLng(point);
+                    }
+                    
+                    traveledPath.setLatLngs(route.slice(0, routeIdx + 1));
+                    
+                    // Actualizar progreso si es la orden seleccionada
+                    if (selectedOrder?.id === orderId) {
+                        const progress = Math.round((routeIdx / totalPoints) * 100);
+                        document.getElementById('trackingProgress').textContent = `${progress}% completado`;
+                        updateTrackingInfoLive(orderId, point[0], point[1], velocidad, progress);
+                    }
+                    
+                    routeIdx++;
+                }, 600 / simulationSpeed);
+                
+                activeSimulations[orderId] = { interval, routeLine, traveledPath, destMarker };
+                updateSimulationStatus();
+                renderOrderList();
+                
+            } catch (error) {
+                addLog(`Error: ${error.message}`);
+            }
+        }
+        
+        // Actualizar info en vivo
+        function updateTrackingInfoLive(orderId, lat, lng, speed, progress) {
+            const container = document.getElementById('trackingInfo');
+            
+            container.innerHTML = `
+                <div class="tracking-row">
+                    <span class="tracking-label">Orden</span>
+                    <span class="tracking-value">#${orderId}</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Posición</span>
+                    <span class="tracking-value">${lat.toFixed(4)}, ${lng.toFixed(4)}</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Velocidad</span>
+                    <span class="tracking-value">${speed.toFixed(0)} km/h</span>
+                </div>
+                <div class="tracking-row">
+                    <span class="tracking-label">Progreso</span>
+                    <span class="tracking-value">${progress}%</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                </div>
+            `;
+        }
+        
+        // Detener simulaciones
+        function stopAllSimulations() {
+            multiSimulationActive = false;
+            
+            Object.values(activeSimulations).forEach(sim => {
+                if (sim.interval) clearInterval(sim.interval);
+                if (sim.routeLine) map.removeLayer(sim.routeLine);
+                if (sim.traveledPath) map.removeLayer(sim.traveledPath);
+                if (sim.destMarker) map.removeLayer(sim.destMarker);
+            });
+            activeSimulations = {};
+            
+            document.getElementById('btnSimulateAll').disabled = false;
+            document.getElementById('btnSimulate').disabled = selectedOrder ? false : true;
+            document.getElementById('simulationStatus').classList.add('hidden');
+            renderOrderList();
+            
+            addLog('⏹️ Simulaciones detenidas');
+        }
+        
+        // Actualizar estado de simulación
+        function updateSimulationStatus() {
+            const count = Object.keys(activeSimulations).length;
+            document.getElementById('statusText').textContent = `${count} pedido${count !== 1 ? 's' : ''} en movimiento`;
+        }
+        
+        // Actualizar velocidad
+        function updateSpeed() {
+            simulationSpeed = parseInt(document.getElementById('speedSlider').value);
+            document.getElementById('speedValue').textContent = `${simulationSpeed}x`;
+        }
+        
+        // Agregar log
+        function addLog(message) {
+            const container = document.getElementById('logContainer');
+            const time = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const entry = document.createElement('div');
+            entry.className = 'log-entry';
+            entry.innerHTML = `<span class="log-time">[${time}]</span> <span class="log-msg">${message}</span>`;
+            
+            container.insertBefore(entry, container.firstChild);
+            
+            while (container.children.length > 30) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            initMap();
+            loadOrders();
+        });
+    </script>
+</body>
+</html>

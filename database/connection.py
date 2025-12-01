@@ -1,18 +1,20 @@
 """
-db.py - Módulo de conexión a bases de datos
-PostgreSQL (psycopg2) y MongoDB (PyMongo)
+database/connection.py - Conexiones a PostgreSQL y MongoDB
 """
 
-import psycopg2
-from psycopg2 import sql
-from pymongo import MongoClient
 import os
+import psycopg2
+from pymongo import MongoClient
+
+
+# ==============================================================================
+# CONFIGURACIÓN
+# ==============================================================================
 
 # Detectar si estamos en Docker (si POSTGRES_HOST está configurado, usamos puerto 5432)
 # En local usamos 5433 para evitar conflicto con PostgreSQL instalado
 _default_pg_port = "5432" if os.getenv("POSTGRES_HOST") else "5433"
 
-# Configuración de conexión - usar variables de entorno en producción
 POSTGRES_CONFIG = {
     "host": os.getenv("POSTGRES_HOST", "localhost"),
     "port": os.getenv("POSTGRES_PORT", _default_pg_port),
@@ -28,13 +30,12 @@ MONGO_CONFIG = {
 }
 
 
-# ==================== POSTGRESQL ====================
+# ==============================================================================
+# POSTGRESQL
+# ==============================================================================
 
 def get_postgres_connection():
-    """
-    Establece conexión con PostgreSQL usando psycopg2.
-    Retorna un objeto connection.
-    """
+    """Establece conexión con PostgreSQL usando psycopg2."""
     try:
         conn = psycopg2.connect(
             host=POSTGRES_CONFIG["host"],
@@ -49,43 +50,12 @@ def get_postgres_connection():
         raise
 
 
-def execute_postgres_query(query, params=None, fetch=False):
-    """
-    Ejecuta una consulta en PostgreSQL.
-    
-    Args:
-        query: Consulta SQL a ejecutar
-        params: Parámetros para la consulta (opcional)
-        fetch: Si True, retorna los resultados
-    
-    Returns:
-        Resultados de la consulta si fetch=True, None en caso contrario
-    """
-    conn = get_postgres_connection()
-    cursor = conn.cursor()
-    try:
-        cursor.execute(query, params)
-        if fetch:
-            result = cursor.fetchall()
-            conn.commit()
-            return result
-        conn.commit()
-        return cursor.lastrowid if cursor.lastrowid else None
-    except psycopg2.Error as e:
-        conn.rollback()
-        raise e
-    finally:
-        cursor.close()
-        conn.close()
-
-
-# ==================== MONGODB ====================
+# ==============================================================================
+# MONGODB
+# ==============================================================================
 
 def get_mongo_client():
-    """
-    Establece conexión con MongoDB usando PyMongo.
-    Retorna el cliente MongoDB.
-    """
+    """Establece conexión con MongoDB usando PyMongo."""
     try:
         client = MongoClient(
             host=MONGO_CONFIG["host"],
@@ -98,27 +68,23 @@ def get_mongo_client():
 
 
 def get_mongo_database():
-    """
-    Obtiene la base de datos MongoDB.
-    """
+    """Obtiene la base de datos MongoDB."""
     client = get_mongo_client()
     return client[MONGO_CONFIG["database"]]
 
 
 def get_tracking_collection():
-    """
-    Obtiene la colección 'tracking' de MongoDB.
-    """
+    """Obtiene la colección 'tracking' de MongoDB."""
     db = get_mongo_database()
     return db["tracking"]
 
 
-# ==================== FUNCIONES AUXILIARES ====================
+# ==============================================================================
+# TEST DE CONEXIONES
+# ==============================================================================
 
 def test_connections():
-    """
-    Prueba las conexiones a ambas bases de datos.
-    """
+    """Prueba las conexiones a ambas bases de datos."""
     print("Probando conexión a PostgreSQL...")
     try:
         conn = get_postgres_connection()
