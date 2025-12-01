@@ -23,7 +23,7 @@ Sistema de gestión logística con arquitectura híbrida **PostgreSQL + MongoDB*
 
 ```bash
 git clone https://github.com/TU_USUARIO/HybridLogisticsHub.git
-cd HybridLogisticsHub
+cd BaseDeGatos2Final
 ```
 
 ### 2️⃣ Iniciar las bases de datos con Docker
