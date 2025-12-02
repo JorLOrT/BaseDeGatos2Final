@@ -373,7 +373,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Parámetros (Path)**:
     *   `cliente_id`: ID numérico del cliente.
 *   **Uso**:
-    1. Solicitar `GET /clientes/5`.
+    1. Solicitar `GET /clientes/1001`.
     2. Si el cliente existe, devuelve sus datos y un array de objetos `ordenes`.
     3. Si no existe, retorna error 404.
 
@@ -420,7 +420,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: `GET /ordenes?estado=En Tránsito&limite=50`
 
 
-![Listar Órdenes](./images/lista_ordenes.png)
+![Listar Órdenes](./images/obtener_ordenes.png)
 
 
 #### `GET /ordenes/{orden_id}` - Obtener Orden
@@ -445,11 +445,11 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 #### `PUT /ordenes/{orden_id}/estado` - Actualizar Estado
 *   **Descripción**: Cambia el estado de la orden.
 *   **Body (JSON)**:
-    ```json
+   ```json
    { 
       "estado": "Entregado" 
    }
-    ```
+   ```
 *   **Paso a Paso**:
     1. Enviar el nuevo estado.
     2. El sistema actualiza PostgreSQL.
