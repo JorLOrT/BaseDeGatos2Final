@@ -340,7 +340,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     2. Recibir un JSON con la estructura de la API y versión `1.0.0`.
 
 
-![Información de la API](Pavo de Miguel pon tu imagen aquí)
+![Información de la API](./images/info_api.png)
 
 
 #### `GET /health` - Chequeo de Estado (Health Check)
@@ -351,7 +351,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     3. Si alguno muestra "error", revisa los contenedores de Docker.
 
 
-![Chequeo de Estado (Health Check)](Pavo de Miguel pon tu imagen aquí)
+![Chequeo de Estado (Health Check)](./images/health.png)
 ---
 
 
@@ -365,7 +365,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: `GET /clientes?limite=20`
 
 
-![Listar Clientes](Pavo de Miguel pon tu imagen aquí)
+![Listar Clientes](./images/listar_clientes.png)
 
 
 #### `GET /clientes/{cliente_id}` - Detalle de Cliente
@@ -378,7 +378,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     3. Si no existe, retorna error 404.
 
 
-![Detalle de Cliente](Pavo de Miguel pon tu imagen aquí)
+![Detalle de Cliente](./images/detalle_cliente.png)
 
 
 ---
@@ -409,7 +409,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     3. Devuelve un JSON con `orden_id`, `cliente_id` y un mensaje de confirmación.
 
 
-![Crear Orden](Pavo de Miguel pon tu imagen aquí)
+![Crear Orden](./images/crear_orden.png)
 
 
 #### `GET /ordenes` - Listar Órdenes
@@ -420,7 +420,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: `GET /ordenes?estado=En Tránsito&limite=50`
 
 
-![Listar Órdenes](Pavo de Miguel pon tu imagen aquí)
+![Listar Órdenes](./images/lista_ordenes.png)
 
 
 #### `GET /ordenes/{orden_id}` - Obtener Orden
@@ -428,7 +428,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: `GET /ordenes/10`
 
 
-![Obtener Orden](Pavo de Miguel pon tu imagen aquí)
+![Obtener Orden](./images/obtener_orden.png)
 
 
 #### `GET /ordenes/{orden_id}/ubicacion` - Ubicación Actual (Federada)
@@ -439,14 +439,16 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     3. Retorna un objeto con la clave `orden` (datos SQL) y `ultima_ubicacion` (datos NoSQL).
 
 
-![Ubicación Actual](Pavo de Miguel pon tu imagen aquí)
+![Ubicación Actual](./images/ubicacion_actual.png)
 
 
 #### `PUT /ordenes/{orden_id}/estado` - Actualizar Estado
 *   **Descripción**: Cambia el estado de la orden.
 *   **Body (JSON)**:
     ```json
-    { "estado": "Entregado" }
+   { 
+      "estado": "Entregado" 
+   }
     ```
 *   **Paso a Paso**:
     1. Enviar el nuevo estado.
@@ -454,7 +456,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     3. **Efecto secundario**: Si el estado es "Entregado", el sistema marca internamente el tracking en MongoDB como finalizado.
 
 
-![Actualizar Estado](Pavo de Miguel pon tu imagen aquí)
+![Actualizar Estado](./images/actualizar_estado.png)
 
 
 ---
@@ -470,7 +472,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     {
       "latitud": -16.409,
       "longitud": -71.537,
-      "timestamp": "2023-11-20T10:00:00",
+      "timestamp": "2025-11-20T10:00:00",
       "velocidad_kmh": 45.5,
       "dispositivo_id": "GPS-01"
     }
@@ -478,7 +480,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: Usado por dispositivos GPS o el simulador para enviar datos en tiempo real.
 
 
-![Registrar Punto GPS](Pavo de Miguel pon tu imagen aquí)
+![Registrar Punto GPS](./images/registrar_punto_gps.png)
 
 
 #### `GET /tracking/{orden_id}/historial` - Historial de Ruta
@@ -488,15 +490,15 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: Ideal para dibujar la polilínea de la ruta recorrida en el mapa.
 
 
-![Historial de Ruta](Pavo de Miguel pon tu imagen aquí)
+![Historial de Ruta](./images/historial_ruta.png)
 
 
 #### `GET /tracking/{orden_id}/estadisticas` - Estadísticas de Envío
 *   **Descripción**: Calcula métricas basándose en los documentos de MongoDB (velocidad promedio, tiempos, total de puntos).
-*   **Uso**: `GET /tracking/10/estadisticas`
+*   **Uso**: Ideal para identificar la variación de la velocidad y tiempo en tránsito.
 
 
-![Estadísticas de Envío](Pavo de Miguel pon tu imagen aquí)
+![Estadísticas de Envío](./images/estadisticas_envio.png)
 
 
 #### `DELETE /tracking/{orden_id}` - Eliminar Tracking
@@ -504,7 +506,7 @@ Endpoints utilitarios para verificar la salud de la aplicación.
 *   **Uso**: Útil para limpiar datos de prueba o reiniciar una simulación.
 
 
-![Eliminar Tracking](Pavo de Miguel pon tu imagen aquí)
+![Eliminar Tracking](./images/eliminar_tracking.png)
 
 
 ---
@@ -521,11 +523,11 @@ Endpoints utilitarios para verificar la salud de la aplicación.
     *   `radio_metros`: (float) Radio de búsqueda en metros (defecto: 1000).
 *   **Uso**:
     1. Definir un punto central (ej. tu ubicación).
-    2. Llamar a: `GET /busqueda-cercana?latitud=-16.409&longitud=-71.537&radio_metros=2000`
+    2. Llamar a: `GET /busqueda-cercana?latitud=-16.405&longitud=-71.549&radio_metros=2000`
     3. El sistema devuelve una lista de órdenes que están físicamente dentro de ese círculo.
 
 
-![Radar de Órdenes](Pavo de Miguel pon tu imagen aquí)
+![Radar de Órdenes](./images/radar_ordenes.png)
 
 
 ## 7. Casos de Uso Comunes
